@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ApexHub - Chat & Submissions</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Firebase Compat SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+  <!-- Google Identity Services (for Google Sign-In) -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  
+<style>
+/* --- CSS: /styles.css --- */
+/* Custom Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.3);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.2);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.4);
+}
+
+/* Navigation Button Active State */
+.nav-btn {
+  color: #94a3b8;
+  background-color: transparent;
+  transition: all 0.2s ease-in-out;
+}
+
+.nav-btn:hover {
+  color: #f8fafc;
+  background-color: rgba(30, 41, 59, 0.5);
+}
+
+.nav-btn.active {
+  color: #ffffff;
+  background-color: #4f46e5;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+}
+
+/* Glassmorphism Card Effects */
+.glass-card {
+  background: rgba(30, 41, 59, 0.4);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Custom Chat Bubble Styling */
+.chat-bubble-self {
+  background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+  border-bottom-right-radius: 2px;
+}
+
+.chat-bubble-other {
+  background-color: #1e293b;
+  border-bottom-left-radius: 2px;
+}
+
+</style></head>
+<body class="h-full font-['Inter'] antialiased flex flex-col overflow-hidden">
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- LOGIN SCREEN -->
+  <div id="login-screen" class="fixed inset-0 z-40 flex items-center justify-center bg-slate-950 px-4">
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.15),transparent_50%)]"></div>
+    <div class="relative w-full max-w-md p-8 rounded-2xl bg-slate-900/80 border border-slate-800 backdrop-blur-xl shadow-2xl text-center">
+      <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 text-indigo-400 mb-6">
+        <i data-lucide="layers" class="w-8 h-8"></i>
+      </div>
+      <h1 class="text-3xl font-extrabold tracking-tight text-white mb-2">ApexHub</h1>
+      <p class="text-slate-400 text-sm mb-8">Sign in to access the Global Chat and Submission Portal</p>
+
+      <!-- Real Google Sign-In Button -->
+      <button id="google-signin-btn" class="w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-100 text-slate-900 font-semibold py-3 px-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-indigo-500/10 mb-4">
+        <svg class="w-5 h-5" viewBox="0 0 24 24">
+          <path fill="#EA4335" d="M12 5.04c1.66 0 3.2.57 4.38 1.69l3.27-3.27C17.67 1.53 14.98 1 12 1 7.35 1 3.37 3.67 1.39 7.56l3.89 3.02c.91-2.73 3.47-4.54 6.72-4.54z"/>
+          <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.36H12v4.51h6.46c-.29 1.48-1.14 2.73-2.4 3.58l3.73 2.89c2.18-2.01 3.7-4.97 3.7-8.62z"/>
+          <path fill="#FBBC05" d="M5.28 14.78c-.23-.69-.36-1.43-.36-2.2s.13-1.51.36-2.2L1.39 7.56C.5 9.34 0 11.31 0 13.4s.5 4.06 1.39 5.84l3.89-3.02z"/>
+          <path fill="#34A853" d="M12 23c3.24 0 5.97-1.07 7.96-2.92l-3.73-2.89c-1.04.7-2.38 1.12-4.23 1.12-3.25 0-5.81-1.81-6.72-4.54L1.39 16.8C3.37 20.69 7.35 23 12 23z"/>
+        </svg>
+        Continue with Google
+      </button>
+
+      <div class="relative my-6">
+        <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-800"></div></div>
+        <span class="relative px-3 bg-slate-900 text-xs text-slate-500 uppercase tracking-wider">Sandbox Demo Bypass</span>
+      </div>
+
+      <!-- Demo Bypass Options (Crucial for testing in iframe environments) -->
+      <div class="grid grid-cols-2 gap-3">
+        <button id="demo-admin-btn" class="flex flex-col items-center justify-center p-3 rounded-xl bg-indigo-950/40 border border-indigo-500/30 hover:bg-indigo-900/40 transition-all group">
+          <i data-lucide="shield-check" class="w-6 h-6 text-indigo-400 mb-1 group-hover:scale-110 transition-transform"></i>
+          <span class="text-xs font-semibold text-indigo-200">Demo Admin</span>
+          <span class="text-[10px] text-indigo-400/80">kfmughal79@gmail.com</span>
+        </button>
+        <button id="demo-user-btn" class="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-800/50 border border-slate-700 hover:bg-slate-800 transition-all group">
+          <i data-lucide="user" class="w-6 h-6 text-slate-400 mb-1 group-hover:scale-110 transition-transform"></i>
+          <span class="text-xs font-semibold text-slate-200">Demo User</span>
+          <span class="text-[10px] text-slate-400/80">clint@example.com</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN APPLICATION LAYOUT -->
+  <div id="app-layout" class="hidden flex-1 flex overflow-hidden">
+    
+    <!-- SIDEBAR -->
+    <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between shrink-0">
+      <div>
+        <!-- Brand Header -->
+        <div class="p-6 border-b border-slate-800 flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
+            <i data-lucide="layers" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h2 class="font-bold text-white tracking-tight">ApexHub</h2>
+            <span class="text-[10px] text-indigo-400 font-semibold tracking-wider uppercase">v1.2 Live</span>
+          </div>
+        </div>
+
+        <!-- Navigation Links -->
+        <nav class="p-4 space-y-1.5">
+          <button data-tab="feed" class="nav-btn active w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-150">
+            <i data-lucide="rss" class="w-5 h-5"></i>
+            <span>Feed Portal</span>
+          </button>
+          <button data-tab="submit" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-150">
+            <i data-lucide="file-plus-2" class="w-5 h-5"></i>
+            <span>Submit Request</span>
+          </button>
+          <button data-tab="chat" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-150 relative">
+            <i data-lucide="message-square" class="w-5 h-5"></i>
+            <span>Global Chat</span>
+            <span id="chat-badge" class="hidden absolute right-4 top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-indigo-500 rounded-full animate-pulse"></span>
+          </button>
+          <button id="admin-nav-btn" data-tab="admin" class="nav-btn hidden w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-150 border border-dashed border-rose-500/20 text-rose-400 hover:bg-rose-950/20">
+            <i data-lucide="shield-alert" class="w-5 h-5"></i>
+            <span>Admin Control</span>
+            <span id="pending-badge" class="hidden ml-auto bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">0</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- User Profile Footer -->
+      <div class="p-4 border-t border-slate-800 bg-slate-950/40">
+        <div class="flex items-center gap-3 mb-3">
+          <img id="user-avatar" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&auto=format&fit=crop&q=60" alt="Avatar" class="w-10 h-10 rounded-full border border-slate-700 object-cover">
+          <div class="overflow-hidden">
+            <h4 id="user-name" class="text-sm font-semibold text-white truncate">Guest User</h4>
+            <p id="user-email" class="text-xs text-slate-400 truncate">guest@example.com</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="role-badge" class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-400 uppercase tracking-wider">User</span>
+          <button id="logout-btn" class="ml-auto p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-rose-400 transition-colors" title="Sign Out">
+            <i data-lucide="log-out" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 flex flex-col bg-slate-950 overflow-hidden relative">
+      <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(99,102,241,0.05),transparent_40%)]"></div>
+
+      <!-- TAB: FEED -->
+      <section id="tab-feed" class="tab-content flex-1 flex flex-col overflow-hidden">
+        <header class="p-6 border-b border-slate-900 flex items-center justify-between shrink-0">
+          <div>
+            <h1 class="text-2xl font-bold text-white">Approved Feed</h1>
+            <p class="text-sm text-slate-400">Explore verified submissions and verified requests</p>
+          </div>
+          <div class="flex items-center gap-2 bg-slate-900 p-1 rounded-lg border border-slate-800">
+            <button id="feed-refresh-btn" class="p-2 rounded-md hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
+              <i data-lucide="rotate-cw" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </header>
+        <div class="flex-1 overflow-y-auto p-6 space-y-6" id="feed-container">
+          <!-- Feed items will be dynamically injected here -->
+        </div>
+      </section>
+
+      <!-- TAB: SUBMIT REQUEST -->
+      <section id="tab-submit" class="tab-content hidden flex-1 flex flex-col overflow-hidden">
+        <header class="p-6 border-b border-slate-900 shrink-0">
+          <h1 class="text-2xl font-bold text-white">Submit Request</h1>
+          <p class="text-sm text-slate-400">Submit your image, description, and file for Admin approval</p>
+        </header>
+        <div class="flex-1 overflow-y-auto p-6">
+          <form id="submission-form" class="max-w-3xl mx-auto space-y-6 bg-slate-900/50 p-8 rounded-2xl border border-slate-800/80 backdrop-blur-sm">
+            
+            <!-- Image Upload with Preview -->
+            <div>
+              <label class="block text-sm font-semibold text-slate-300 mb-2">Gallery Image</label>
+              <div class="relative group border-2 border-dashed border-slate-700 hover:border-indigo-500/50 rounded-xl transition-all duration-200 bg-slate-950/40 overflow-hidden">
+                <input type="file" id="submit-image" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer z-10">
+                <div id="image-preview-placeholder" class="p-8 flex flex-col items-center justify-center text-center">
+                  <div class="w-12 h-12 rounded-lg bg-slate-900 flex items-center justify-center text-slate-400 mb-3 group-hover:text-indigo-400 transition-colors">
+                    <i data-lucide="image" class="w-6 h-6"></i>
+                  </div>
+                  <p class="text-sm font-medium text-slate-300">Click or drag to upload an image</p>
+                  <p class="text-xs text-slate-500 mt-1">PNG, JPG, GIF up to 5MB</p>
+                </div>
+                <div id="image-preview-container" class="hidden relative aspect-video w-full">
+                  <img id="image-preview" src="" alt="Preview" class="w-full h-full object-cover">
+                  <button type="button" id="remove-image-btn" class="absolute top-3 right-3 p-2 bg-slate-950/80 hover:bg-rose-600 text-white rounded-lg transition-colors z-20">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div>
+              <label for="submit-description" class="block text-sm font-semibold text-slate-300 mb-2">Description</label>
+              <textarea id="submit-description" rows="3" required placeholder="Provide a detailed description of your request..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors resize-none"></textarea>
+            </div>
+
+            <!-- Message Input -->
+            <div>
+              <label for="submit-message" class="block text-sm font-semibold text-slate-300 mb-2">Additional Message</label>
+              <input type="text" id="submit-message" required placeholder="Short message or note for the admin..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors">
+            </div>
+
+            <!-- File Attachment -->
+            <div>
+              <label class="block text-sm font-semibold text-slate-300 mb-2">Attach File</label>
+              <div class="flex items-center gap-4">
+                <label class="flex items-center gap-2 px-4 py-2.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-xl cursor-pointer text-sm font-medium text-slate-300 transition-colors">
+                  <i data-lucide="paperclip" class="w-4 h-4"></i>
+                  <span>Choose File</span>
+                  <input type="file" id="submit-file" class="hidden">
+                </label>
+                <span id="file-name-display" class="text-xs text-slate-500 truncate max-w-xs">No file attached</span>
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3.5 px-4 rounded-xl transition-all duration-200 shadow-lg shadow-indigo-500/10">
+              <i data-lucide="send" class="w-4 h-4"></i>
+              <span>Submit Request to Admin</span>
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <!-- TAB: GLOBAL CHAT -->
+      <section id="tab-chat" class="tab-content hidden flex-1 flex flex-col overflow-hidden">
+        <header class="p-6 border-b border-slate-900 flex items-center justify-between shrink-0">
+          <div>
+            <h1 class="text-2xl font-bold text-white">Global Chat Room</h1>
+            <p class="text-sm text-slate-400">Real-time communication with all active members</p>
+          </div>
+          <div class="flex items-center gap-2 text-xs bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-3 py-1.5 rounded-full font-semibold">
+            <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+            <span>Live Sync Active</span>
+          </div>
+        </header>
+        
+        <!-- Chat Messages Area -->
+        <div id="chat-messages" class="flex-1 overflow-y-auto p-6 space-y-4">
+          <!-- Chat bubbles will be dynamically injected here -->
+        </div>
+
+        <!-- Chat Input Area -->
+        <div class="p-4 border-t border-slate-900 bg-slate-900/40 shrink-0">
+          <form id="chat-form" class="max-w-4xl mx-auto flex gap-3">
+            <input type="text" id="chat-input" required placeholder="Type your message here..." class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors">
+            <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white p-3.5 rounded-xl transition-all duration-200 shadow-lg shadow-indigo-500/10 flex items-center justify-center shrink-0">
+              <i data-lucide="send" class="w-5 h-5"></i>
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <!-- TAB: ADMIN CONTROL PANEL -->
+      <section id="tab-admin" class="tab-content hidden flex-1 flex flex-col overflow-hidden">
+        <header class="p-6 border-b border-slate-900 flex items-center justify-between shrink-0">
+          <div>
+            <h1 class="text-2xl font-bold text-white flex items-center gap-2">
+              <i data-lucide="shield-check" class="text-rose-500 w-7 h-7"></i>
+              Admin Control Panel
+            </h1>
+            <p class="text-sm text-slate-400">Approve or reject pending user submissions</p>
+          </div>
+          <div class="flex items-center gap-4">
+            <div class="text-right">
+              <span class="text-xs text-slate-500 block">Logged in as Admin</span>
+              <span class="text-xs font-semibold text-rose-400">kfmughal79@gmail.com</span>
+            </div>
+          </div>
+        </header>
+
+        <!-- Admin Stats -->
+        <div class="p-6 grid grid-cols-3 gap-4 shrink-0 border-b border-slate-900 bg-slate-900/20">
+          <div class="bg-slate-900/60 border border-slate-800 p-4 rounded-xl">
+            <span class="text-xs text-slate-400 block mb-1">Pending Requests</span>
+            <span id="stat-pending" class="text-2xl font-bold text-amber-400">0</span>
+          </div>
+          <div class="bg-slate-900/60 border border-slate-800 p-4 rounded-xl">
+            <span class="text-xs text-slate-400 block mb-1">Approved Submissions</span>
+            <span id="stat-approved" class="text-2xl font-bold text-emerald-400">0</span>
+          </div>
+          <div class="bg-slate-900/60 border border-slate-800 p-4 rounded-xl">
+            <span class="text-xs text-slate-400 block mb-1">Total Submissions</span>
+            <span id="stat-total" class="text-2xl font-bold text-indigo-400">0</span>
+          </div>
+        </div>
+
+        <!-- Admin Submissions List -->
+        <div class="flex-1 overflow-y-auto p-6 space-y-6" id="admin-submissions-container">
+          <!-- Pending items will be dynamically injected here -->
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Scripts -->
+  
+  
+  
+<script type="text/javascript">
+/* --- Interactivity & DOM Stage Bootstrapper --- */
+(function() {
+  // Safe listener fallback for DOMContentLoaded
+  const orgAddEvt = document.addEventListener;
+  document.addEventListener = function(type, listener, options) {
+    if (type === 'DOMContentLoaded' && document.readyState !== 'loading') {
+      setTimeout(listener, 1);
+    } else {
+      orgAddEvt.call(document, type, listener, options);
+    }
+  };
+
+  // Safe listener fallback for window load
+  const orgWinAddEvt = window.addEventListener;
+  window.addEventListener = function(type, listener, options) {
+    if (type === 'load' && document.readyState === 'complete') {
+      setTimeout(listener, 1);
+    } else {
+      orgWinAddEvt.call(window, type, listener, options);
+    }
+  };
+
+  // Safe callback mapping for window.onload on late loads
+  let winOnload = null;
+  Object.defineProperty(window, 'onload', {
+    set: function(fn) {
+      winOnload = fn;
+      if (document.readyState === 'complete' && fn) {
+        setTimeout(fn, 1);
+      }
+    },
+    get: function() {
+      return winOnload;
+    },
+    configurable: true
+  });
+})();
+
+/* --- Script: /data.js --- */
+// Fallback Mock Data for Offline/Demo Mode
+// This ensures the application remains fully functional even if Firebase credentials are blocked or offline.
+window.AppStore = {
+  fallbackSubmissions: [
+    {
+      id: "mock-sub-1",
+      userId: "demo-user-123",
+      userName: "Sarah Jenkins",
+      userEmail: "sarah@example.com",
+      userPhoto: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&auto=format&fit=crop&q=60",
+      image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=60",
+      description: "Abstract 3D render for the new landing page hero section. High resolution with vibrant neon gradients.",
+      message: "Please review this design for the upcoming Q3 marketing campaign.",
+      fileName: "hero-render-final.png",
+      fileData: "data:text/plain;base64,U2FuZGJveCBGaWxlIERlbW8=",
+      status: "approved",
+      timestamp: Date.now() - 3600000 * 4
+    },
+    {
+      id: "mock-sub-2",
+      userId: "demo-user-456",
+      userName: "Alex Rivera",
+      userEmail: "alex@example.com",
+      userPhoto: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&auto=format&fit=crop&q=60",
+      image: "https://images.unsplash.com/photo-1600132806370-bf17e65e942f?w=800&auto=format&fit=crop&q=60",
+      description: "Minimalist workspace setup concept for the remote work blog post.",
+      message: "Hope you like the lighting in this shot!",
+      fileName: "workspace-setup.jpg",
+      fileData: "data:text/plain;base64,U2FuZGJveCBGaWxlIERlbW8=",
+      status: "pending",
+      timestamp: Date.now() - 3600000
+    }
+  ],
+  fallbackChats: [
+    {
+      id: "mock-chat-1",
+      userId: "demo-user-123",
+      userName: "Sarah Jenkins",
+      userEmail: "sarah@example.com",
+      userPhoto: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&auto=format&fit=crop&q=60",
+      message: "Hey everyone! Welcome to the global chat room. Feel free to share your thoughts here.",
+      timestamp: Date.now() - 3600000 * 2
+    },
+    {
+      id: "mock-admin-1",
+      userId: "demo-admin-999",
+      userName: "KF Mughal (Admin)",
+      userEmail: "kfmughal79@gmail.com",
+      userPhoto: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=60",
+      message: "Hello team! I will be reviewing all submissions shortly. Make sure to attach high-quality images and files.",
+      timestamp: Date.now() - 3600000
+    }
+  ]
+};
+
+
+/* --- Script: /utils.js --- */
+// Web Audio API Synthesizer for Interactive Sound Effects
+class SoundEffects {
+  constructor() {
+    this.ctx = null;
+  }
+
+  init() {
+    if (!this.ctx) {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+  }
+
+  playSuccess() {
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(523.25, now); // C5
+    osc.frequency.exponentialRampToValueAtTime(880, now + 0.15); // A5
+    
+    gain.gain.setValueAtTime(0.1, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+    
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    
+    osc.start(now);
+    osc.stop(now + 0.3);
+  }
+
+  playError() {
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(150, now);
+    osc.frequency.linearRampToValueAtTime(80, now + 0.2);
+    
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+    
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    
+    osc.start(now);
+    osc.stop(now + 0.25);
+  }
+
+  playMessage() {
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(600, now);
+    osc.frequency.exponentialRampToValueAtTime(900, now + 0.08);
+    
+    gain.gain.setValueAtTime(0.1, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+    
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    
+    osc.start(now);
+    osc.stop(now + 0.12);
+  }
+
+  playClick() {
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1000, now);
+    
+    gain.gain.setValueAtTime(0.05, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+    
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    
+    osc.start(now);
+    osc.stop(now + 0.05);
+  }
+}
+
+window.sounds = new SoundEffects();
+
+// Helper to format timestamps beautifully
+window.formatDate = function(timestamp) {
+  if (!timestamp) return 'Just now';
+  const date = new Date(timestamp);
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+// Helper to convert File to Base64
+window.fileToBase64 = function(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+  });
+};
+
+// Toast Notification System
+window.showToast = function(message, type = 'info') {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = `flex items-center gap-3 px-4 py-3 rounded-xl border shadow-2xl transition-all duration-300 transform translate-y-2 opacity-0 pointer-events-auto max-w-sm animate-fade-in-up`;
+  
+  let icon = 'info';
+  let bgClass = 'bg-slate-900 border-slate-800 text-slate-100';
+  
+  if (type === 'success') {
+    icon = 'check-circle';
+    bgClass = 'bg-emerald-950/90 border-emerald-500/30 text-emerald-200';
+    window.sounds.playSuccess();
+  } else if (type === 'error') {
+    icon = 'alert-triangle';
+    bgClass = 'bg-rose-950/90 border-rose-500/30 text-rose-200';
+    window.sounds.playError();
+  } else {
+    window.sounds.playClick();
+  }
+
+  toast.className += ` ${bgClass}`;
+  toast.innerHTML = `
+    <i data-lucide="${icon}" class="w-5 h-5 shrink-0"></i>
+    <span class="text-sm font-medium">${message}</span>
+  `;
+
+  container.appendChild(toast);
+  lucide.createIcons();
+
+  // Animate in
+  setTimeout(() => {
+    toast.classList.remove('translate-y-2', 'opacity-0');
+  }, 10);
+
+  // Remove after 4 seconds
+  setTimeout(() => {
+    toast.classList.add('translate-y-2', 'opacity-0');
+    setTimeout(() => {
+      toast.remove();
+    }, 300);
+  }, 4000);
+};
+
+
+/* --- Script: /app.js --- */
+// Firebase Configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyAPylc_xwwT_tW-c_X3zr1kNBoCccJTvHg",
+  authDomain: "store-2e02c.firebaseapp.com",
+  databaseURL: "https://store-2e02c-default-rtdb.firebaseio.com",
+  projectId: "store-2e02c",
+  storageBucket: "store-2e02c.firebasestorage.app",
+  messagingSenderId: "1046899344173",
+  appId: "1:1046899344173:web:de0bdf042c1b731858c9a4",
+  measurementId: "G-2DCTVZCP7K"
+};
+
+// Global State
+let currentUser = null;
+let isFirebaseConnected = false;
+let database = null;
+let auth = null;
+
+// DOM Elements
+const loginScreen = document.getElementById('login-screen');
+const appLayout = document.getElementById('app-layout');
+const googleSignInBtn = document.getElementById('google-signin-btn');
+const demoAdminBtn = document.getElementById('demo-admin-btn');
+const demoUserBtn = document.getElementById('demo-user-btn');
+const logoutBtn = document.getElementById('logout-btn');
+
+const userAvatar = document.getElementById('user-avatar');
+const userName = document.getElementById('user-name');
+const userEmail = document.getElementById('user-email');
+const roleBadge = document.getElementById('role-badge');
+const adminNavBtn = document.getElementById('admin-nav-btn');
+const pendingBadge = document.getElementById('pending-badge');
+const chatBadge = document.getElementById('chat-badge');
+
+const navButtons = document.querySelectorAll('.nav-btn');
+const tabContents = document.querySelectorAll('.tab-content');
+
+// Form Elements
+const submissionForm = document.getElementById('submission-form');
+const submitImage = document.getElementById('submit-image');
+const imagePreviewPlaceholder = document.getElementById('image-preview-placeholder');
+const imagePreviewContainer = document.getElementById('image-preview-container');
+const imagePreview = document.getElementById('image-preview');
+const removeImageBtn = document.getElementById('remove-image-btn');
+const submitFile = document.getElementById('submit-file');
+const fileNameDisplay = document.getElementById('file-name-display');
+
+// Chat Elements
+const chatForm = document.getElementById('chat-form');
+const chatInput = document.getElementById('chat-input');
+const chatMessages = document.getElementById('chat-messages');
+
+// Containers
+const feedContainer = document.getElementById('feed-container');
+const adminSubmissionsContainer = document.getElementById('admin-submissions-container');
+const feedRefreshBtn = document.getElementById('feed-refresh-btn');
+
+// Admin Stats
+const statPending = document.getElementById('stat-pending');
+const statApproved = document.getElementById('stat-approved');
+const statTotal = document.getElementById('stat-total');
+
+// Base64 Storage Variables
+let uploadedImageBase64 = "";
+let uploadedFileBase64 = "";
+let uploadedFileName = "";
+
+// Initialize Firebase
+try {
+  firebase.initializeApp(firebaseConfig);
+  database = firebase.database();
+  auth = firebase.auth();
+  isFirebaseConnected = true;
+  console.log("Firebase initialized successfully.");
+} catch (error) {
+  console.warn("Firebase initialization failed. Falling back to LocalStorage mode.", error);
+  isFirebaseConnected = false;
+}
+
+// Initialize Application
+document.addEventListener('DOMContentLoaded', () => {
+  setupAuthListeners();
+  setupNavigation();
+  setupFormHandlers();
+  setupChatHandler();
+  lucide.createIcons();
+});
+
+// --- AUTHENTICATION SYSTEM ---
+function setupAuthListeners() {
+  // 1. Restore session from LocalStorage immediately on startup
+  const savedSession = localStorage.getItem('apex_user_session');
+  if (savedSession) {
+    try {
+      const user = JSON.parse(savedSession);
+      handleUserLogin(user, false); // Log in silently without showing toast
+    } catch (e) {
+      console.error("Failed to restore saved session:", e);
+    }
+  }
+
+  if (isFirebaseConnected) {
+    // Real Firebase Auth State Listener
+    auth.onAuthStateChanged((user) => {
+      if (user) {
+        handleUserLogin({
+          uid: user.uid,
+          displayName: user.displayName || "Google User",
+          email: user.email,
+          photoURL: user.photoURL || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&auto=format&fit=crop&q=60"
+        });
+      } else {
+        // CRITICAL FIX: If we are currently logged in as a Demo user, do NOT let the Firebase null state log us out!
+        if (currentUser && currentUser.uid && currentUser.uid.startsWith('demo-')) {
+          return;
+        }
+        handleUserLogout(false); // Silent logout on initial load if no session exists
+      }
+    });
+
+    // Google Sign-In Button Action
+    googleSignInBtn.addEventListener('click', () => {
+      window.sounds.playClick();
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider).catch((error) => {
+        console.error("Google Sign-In failed:", error);
+        window.showToast("Google Sign-In failed. Try Demo Login!", "error");
+      });
+    });
+  } else {
+    // If Firebase is blocked/offline, disable real Google Sign-In button visual
+    googleSignInBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    googleSignInBtn.title = "Firebase connection unavailable";
+  }
+
+  // Demo Bypass Buttons (Crucial for sandbox environments)
+  demoAdminBtn.addEventListener('click', () => {
+    window.sounds.playClick();
+    handleUserLogin({
+      uid: "demo-admin-999",
+      displayName: "KF Mughal (Admin)",
+      email: "kfmughal79@gmail.com",
+      photoURL: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=60"
+    }, true);
+  });
+
+  demoUserBtn.addEventListener('click', () => {
+    window.sounds.playClick();
+    handleUserLogin({
+      uid: "demo-user-101",
+      displayName: "Clint Barton",
+      email: "clint@example.com",
+      photoURL: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&auto=format&fit=crop&q=60"
+    }, true);
+  });
+
+  logoutBtn.addEventListener('click', () => {
+    window.sounds.playClick();
+    if (isFirebaseConnected) {
+      auth.signOut().then(() => {
+        handleUserLogout(true);
+      }).catch(() => {
+        handleUserLogout(true);
+      });
+    } else {
+      handleUserLogout(true);
+    }
+  });
+}
+
+function handleUserLogin(user, showToast = false) {
+  currentUser = user;
+  
+  // Save session to LocalStorage
+  localStorage.setItem('apex_user_session', JSON.stringify(user));
+
+  // Update Profile UI
+  userAvatar.src = user.photoURL;
+  userName.textContent = user.displayName;
+  userEmail.textContent = user.email;
+
+  // Check Admin Status
+  const isAdmin = user.email.toLowerCase() === 'kfmughal79@gmail.com';
+  if (isAdmin) {
+    roleBadge.textContent = "Admin";
+    roleBadge.className = "text-[10px] font-bold px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 uppercase tracking-wider";
+    adminNavBtn.classList.remove('hidden');
+  } else {
+    roleBadge.textContent = "User";
+    roleBadge.className = "text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-400 uppercase tracking-wider";
+    adminNavBtn.classList.add('hidden');
+  }
+
+  // Transition Screens
+  loginScreen.classList.add('hidden');
+  appLayout.classList.remove('hidden');
+
+  // Load Data
+  syncSubmissions();
+  syncChats();
+
+  if (showToast) {
+    window.showToast(`Welcome back, ${user.displayName}!`, "success");
+  }
+}
+
+function handleUserLogout(showToast = true) {
+  const wasLoggedIn = !!currentUser;
+  currentUser = null;
+  localStorage.removeItem('apex_user_session');
+  loginScreen.classList.remove('hidden');
+  appLayout.classList.add('hidden');
+  
+  if (showToast && wasLoggedIn) {
+    window.showToast("Signed out successfully", "info");
+  }
+}
+
+// --- NAVIGATION SYSTEM ---
+function setupNavigation() {
+  navButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetTab = btn.getAttribute('data-tab');
+      window.sounds.playClick();
+      switchTab(targetTab);
+    });
+  });
+
+  feedRefreshBtn.addEventListener('click', () => {
+    window.sounds.playClick();
+    syncSubmissions();
+    window.showToast("Feed refreshed", "success");
+  });
+}
+
+function switchTab(tabId) {
+  navButtons.forEach(btn => {
+    if (btn.getAttribute('data-tab') === tabId) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+
+  tabContents.forEach(content => {
+    if (content.id === `tab-${tabId}`) {
+      content.classList.remove('hidden');
+    } else {
+      content.classList.add('hidden');
+    }
+  });
+
+  if (tabId === 'chat') {
+    chatBadge.classList.add('hidden');
+    scrollToBottom();
+  }
+}
+
+// --- SUBMISSION SYSTEM (FORM HANDLERS) ---
+function setupFormHandlers() {
+  // Image Upload Preview
+  submitImage.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      try {
+        uploadedImageBase64 = await window.fileToBase64(file);
+        imagePreview.src = uploadedImageBase64;
+        imagePreviewPlaceholder.classList.add('hidden');
+        imagePreviewContainer.classList.remove('hidden');
+        window.sounds.playClick();
+      } catch (err) {
+        window.showToast("Failed to load image", "error");
+      }
+    }
+  });
+
+  removeImageBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    uploadedImageBase64 = "";
+    submitImage.value = "";
+    imagePreviewPlaceholder.classList.remove('hidden');
+    imagePreviewContainer.classList.add('hidden');
+    window.sounds.playClick();
+  });
+
+  // File Attachment
+  submitFile.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      try {
+        uploadedFileBase64 = await window.fileToBase64(file);
+        uploadedFileName = file.name;
+        fileNameDisplay.textContent = file.name;
+        fileNameDisplay.className = "text-xs text-indigo-400 font-semibold truncate max-w-xs";
+        window.sounds.playClick();
+      } catch (err) {
+        window.showToast("Failed to load file", "error");
+      }
+    }
+  });
+
+  // Form Submission
+  submissionForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    
+    const description = document.getElementById('submit-description').value.trim();
+    const message = document.getElementById('submit-message').value.trim();
+
+    if (!uploadedImageBase64) {
+      window.showToast("Please upload a gallery image", "error");
+      return;
+    }
+
+    if (!currentUser) {
+      window.showToast("You must be logged in to submit", "error");
+      return;
+    }
+
+    const submissionData = {
+      id: isFirebaseConnected ? null : 'local-' + Date.now(),
+      userId: currentUser.uid,
+      userName: currentUser.displayName,
+      userEmail: currentUser.email,
+      userPhoto: currentUser.photoURL,
+      image: uploadedImageBase64,
+      description: description,
+      message: message,
+      fileName: uploadedFileName || "No attachment",
+      fileData: uploadedFileBase64 || "",
+      status: "pending",
+      timestamp: Date.now()
+    };
+
+    if (isFirebaseConnected) {
+      const newRef = database.ref('submissions').push();
+      submissionData.id = newRef.key;
+      newRef.set(submissionData)
+        .then(() => handleSubmissionSuccess())
+        .catch(err => {
+          console.error(err);
+          window.showToast("Submission failed", "error");
+        });
+    } else {
+      // LocalStorage Fallback
+      const localSubs = JSON.parse(localStorage.getItem('apex_submissions')) || window.AppStore.fallbackSubmissions;
+      localSubs.push(submissionData);
+      localStorage.setItem('apex_submissions', JSON.stringify(localSubs));
+      handleSubmissionSuccess();
+      syncSubmissions();
+    }
+  });
+}
+
+function handleSubmissionSuccess() {
+  window.showToast("Request submitted to Admin!", "success");
+  submissionForm.reset();
+  uploadedImageBase64 = "";
+  uploadedFileBase64 = "";
+  uploadedFileName = "";
+  imagePreviewPlaceholder.classList.remove('hidden');
+  imagePreviewContainer.classList.add('hidden');
+  fileNameDisplay.textContent = "No file attached";
+  fileNameDisplay.className = "text-xs text-slate-500 truncate max-w-xs";
+  switchTab('feed');
+}
+
+// --- DATA SYNC & RENDERING ---
+function syncSubmissions() {
+  if (isFirebaseConnected) {
+    database.ref('submissions').on('value', (snapshot) => {
+      const data = snapshot.val();
+      const list = data ? Object.values(data) : [];
+      renderSubmissions(list);
+    });
+  } else {
+    const localSubs = JSON.parse(localStorage.getItem('apex_submissions')) || window.AppStore.fallbackSubmissions;
+    renderSubmissions(localSubs);
+  }
+}
+
+function renderSubmissions(list) {
+  if (!currentUser) return; // Guard clause to prevent crashes on initial load
+
+  // Filter lists
+  const approved = list.filter(item => item.status === 'approved').sort((a, b) => b.timestamp - a.timestamp);
+  const pending = list.filter(item => item.status === 'pending').sort((a, b) => b.timestamp - a.timestamp);
+
+  // Update Admin Stats
+  statPending.textContent = pending.length;
+  statApproved.textContent = approved.length;
+  statTotal.textContent = list.length;
+
+  // Update Admin Badge
+  if (pending.length > 0) {
+    pendingBadge.textContent = pending.length;
+    pendingBadge.classList.remove('hidden');
+  } else {
+    pendingBadge.classList.add('hidden');
+  }
+
+  // Render Feed
+  feedContainer.innerHTML = "";
+  if (approved.length === 0) {
+    feedContainer.innerHTML = `
+      <div class="text-center py-12 text-slate-500">
+        <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3 opacity-40"></i>
+        <p>No approved submissions yet.</p>
+      </div>
+    `;
+  } else {
+    approved.forEach(item => {
+      const card = document.createElement('div');
+      card.className = "glass-card rounded-2xl overflow-hidden border border-slate-800/80 flex flex-col md:flex-row gap-6 p-6 animate-fade-in-up";
+      
+      const downloadBtn = item.fileData 
+        ? `<a href="${item.fileData}" download="${item.fileName}" class="inline-flex items-center gap-2 text-xs font-semibold text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 px-3 py-1.5 rounded-lg transition-all">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i> Download Attachment (${item.fileName})
+           </a>`
+        : `<span class="text-xs text-slate-500">No attached file</span>`;
+
+      card.innerHTML = `
+        <div class="w-full md:w-1/3 aspect-video md:aspect-square rounded-xl overflow-hidden border border-slate-800 shrink-0">
+          <img src="${item.image}" alt="Submission Image" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300">
+        </div>
+        <div class="flex-1 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="flex items-center gap-3 mb-3">
+              <img src="${item.userPhoto}" alt="User" class="w-8 h-8 rounded-full border border-slate-700">
+              <div>
+                <h4 class="text-sm font-semibold text-white">${item.userName}</h4>
+                <p class="text-[10px] text-slate-400">${window.formatDate(item.timestamp)}</p>
+              </div>
+              <span class="ml-auto text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider">Approved</span>
+            </div>
+            <p class="text-slate-200 text-sm font-medium mb-2">${item.description}</p>
+            <p class="text-slate-400 text-xs italic bg-slate-950/40 p-3 rounded-lg border border-slate-900">"${item.message}"</p>
+          </div>
+          <div class="pt-3 border-t border-slate-800/60 flex items-center justify-between">
+            ${downloadBtn}
+          </div>
+        </div>
+      `;
+      feedContainer.appendChild(card);
+    });
+  }
+
+  // Render Admin Panel
+  adminSubmissionsContainer.innerHTML = "";
+  if (pending.length === 0) {
+    adminSubmissionsContainer.innerHTML = `
+      <div class="text-center py-12 text-slate-500">
+        <i data-lucide="check-circle-2" class="w-12 h-12 mx-auto mb-3 text-emerald-500 opacity-80"></i>
+        <p class="text-slate-300 font-medium">All caught up!</p>
+        <p class="text-xs mt-1">No pending submissions require approval.</p>
+      </div>
+    `;
+  } else {
+    pending.forEach(item => {
+      const card = document.createElement('div');
+      card.className = "glass-card rounded-2xl overflow-hidden border border-slate-800/80 flex flex-col md:flex-row gap-6 p-6 animate-fade-in-up";
+      
+      const downloadBtn = item.fileData 
+        ? `<a href="${item.fileData}" download="${item.fileName}" class="inline-flex items-center gap-2 text-xs font-semibold text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 px-3 py-1.5 rounded-lg transition-all">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i> Download Attachment (${item.fileName})
+           </a>`
+        : `<span class="text-xs text-slate-500">No attached file</span>`;
+
+      card.innerHTML = `
+        <div class="w-full md:w-1/3 aspect-video md:aspect-square rounded-xl overflow-hidden border border-slate-800 shrink-0">
+          <img src="${item.image}" alt="Submission Image" class="w-full h-full object-cover">
+        </div>
+        <div class="flex-1 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="flex items-center gap-3 mb-3">
+              <img src="${item.userPhoto}" alt="User" class="w-8 h-8 rounded-full border border-slate-700">
+              <div>
+                <h4 class="text-sm font-semibold text-white">${item.userName}</h4>
+                <p class="text-[10px] text-slate-400">${item.userEmail} • ${window.formatDate(item.timestamp)}</p>
+              </div>
+              <span class="ml-auto text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase tracking-wider">Pending</span>
+            </div>
+            <p class="text-slate-200 text-sm font-medium mb-2">${item.description}</p>
+            <p class="text-slate-400 text-xs italic bg-slate-950/40 p-3 rounded-lg border border-slate-900">"${item.message}"</p>
+          </div>
+          <div class="pt-3 border-t border-slate-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            ${downloadBtn}
+            <div class="flex items-center gap-2 self-end">
+              <button onclick="handleAdminAction('${item.id}', 'reject')" class="flex items-center gap-1.5 px-4 py-2 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white text-xs font-bold rounded-xl border border-rose-500/20 transition-all">
+                <i data-lucide="x-circle" class="w-4 h-4"></i> Reject & Delete
+              </button>
+              <button onclick="handleAdminAction('${item.id}', 'approve')" class="flex items-center gap-1.5 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-white text-xs font-bold rounded-xl border border-emerald-500/20 transition-all">
+                <i data-lucide="check-circle" class="w-4 h-4"></i> Approve & Publish
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      adminSubmissionsContainer.appendChild(card);
+    });
+  }
+  lucide.createIcons();
+}
+
+// Admin Actions (Approve / Reject)
+window.handleAdminAction = function(id, action) {
+  window.sounds.playClick();
+  if (isFirebaseConnected) {
+    if (action === 'approve') {
+      database.ref(`submissions/${id}`).update({ status: 'approved' })
+        .then(() => window.showToast("Submission Approved!", "success"))
+        .catch(err => window.showToast("Action failed", "error"));
+    } else if (action === 'reject') {
+      database.ref(`submissions/${id}`).remove()
+        .then(() => window.showToast("Submission Rejected & Deleted!", "success"))
+        .catch(err => window.showToast("Action failed", "error"));
+    }
+  } else {
+    // LocalStorage Fallback
+    let localSubs = JSON.parse(localStorage.getItem('apex_submissions')) || window.AppStore.fallbackSubmissions;
+    if (action === 'approve') {
+      localSubs = localSubs.map(item => item.id === id ? { ...item, status: 'approved' } : item);
+      window.showToast("Submission Approved!", "success");
+    } else if (action === 'reject') {
+      localSubs = localSubs.filter(item => item.id !== id);
+      window.showToast("Submission Rejected & Deleted!", "success");
+    }
+    localStorage.setItem('apex_submissions', JSON.stringify(localSubs));
+    syncSubmissions();
+  }
+};
+
+// --- GLOBAL CHAT SYSTEM ---
+function setupChatHandler() {
+  chatForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const msgText = chatInput.value.trim();
+    if (!msgText) return;
+
+    if (!currentUser) {
+      window.showToast("You must be logged in to chat", "error");
+      return;
+    }
+
+    const chatData = {
+      id: isFirebaseConnected ? null : 'chat-' + Date.now(),
+      userId: currentUser.uid,
+      userName: currentUser.displayName,
+      userEmail: currentUser.email,
+      userPhoto: currentUser.photoURL,
+      message: msgText,
+      timestamp: Date.now()
+    };
+
+    if (isFirebaseConnected) {
+      const newRef = database.ref('chats').push();
+      chatData.id = newRef.key;
+      newRef.set(chatData)
+        .then(() => {
+          chatInput.value = "";
+          window.sounds.playMessage();
+        })
+        .catch(err => window.showToast("Failed to send message", "error"));
+    } else {
+      // LocalStorage Fallback
+      const localChats = JSON.parse(localStorage.getItem('apex_chats')) || window.AppStore.fallbackChats;
+      localChats.push(chatData);
+      localStorage.setItem('apex_chats', JSON.stringify(localChats));
+      chatInput.value = "";
+      window.sounds.playMessage();
+      syncChats();
+    }
+  });
+}
+
+function syncChats() {
+  if (isFirebaseConnected) {
+    database.ref('chats').limitToLast(50).on('value', (snapshot) => {
+      const data = snapshot.val();
+      const list = data ? Object.values(data) : [];
+      renderChats(list);
+    });
+  } else {
+    const localChats = JSON.parse(localStorage.getItem('apex_chats')) || window.AppStore.fallbackChats;
+    renderChats(localChats);
+  }
+}
+
+function renderChats(list) {
+  if (!currentUser) return; // Guard clause to prevent crashes on initial load
+
+  const sorted = list.sort((a, b) => a.timestamp - b.timestamp);
+  const isAtBottom = chatMessages.scrollHeight - chatMessages.scrollTop <= chatMessages.clientHeight + 100;
+
+  chatMessages.innerHTML = "";
+  sorted.forEach(msg => {
+    const isSelf = msg.userId === currentUser.uid;
+    const isAdmin = msg.userEmail.toLowerCase() === 'kfmughal79@gmail.com';
+    
+    const bubbleClass = isSelf ? 'chat-bubble-self text-white' : 'chat-bubble-other text-slate-100';
+    const alignClass = isSelf ? 'justify-end' : 'justify-start';
+    const adminBadge = isAdmin ? `<span class="ml-1.5 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-rose-500 text-white uppercase tracking-wider">Admin</span>` : '';
+
+    const msgElement = document.createElement('div');
+    msgElement.className = `flex gap-3 ${alignClass} animate-fade-in-up`;
+    msgElement.innerHTML = `
+      ${!isSelf ? `<img src="${msg.userPhoto}" alt="Avatar" class="w-8 h-8 rounded-full border border-slate-800 shrink-0 object-cover">` : ''}
+      <div class="max-w-[70%] flex flex-col ${isSelf ? 'items-end' : 'items-start'}">
+        <div class="flex items-center gap-1.5 mb-1">
+          <span class="text-xs font-semibold text-slate-400">${msg.userName}</span>
+          ${adminBadge}
+          <span class="text-[9px] text-slate-500">${window.formatDate(msg.timestamp)}</span>
+        </div>
+        <div class="px-4 py-2.5 rounded-2xl text-sm shadow-md ${bubbleClass}">
+          <p class="break-words leading-relaxed">${msg.message}</p>
+        </div>
+      </div>
+      ${isSelf ? `<img src="${msg.userPhoto}" alt="Avatar" class="w-8 h-8 rounded-full border border-slate-800 shrink-0 object-cover">` : ''}
+    `;
+    chatMessages.appendChild(msgElement);
+  });
+
+  // Auto-scroll logic
+  if (isAtBottom || document.getElementById('tab-chat').classList.contains('hidden') === false) {
+    scrollToBottom();
+  }
+
+  // Show notification badge if chat is not active
+  if (document.getElementById('tab-chat').classList.contains('hidden')) {
+    chatBadge.classList.remove('hidden');
+  }
+}
+
+function scrollToBottom() {
+  setTimeout(() => {
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }, 50);
+}
+
+</script></body>
+</html>
